@@ -1,0 +1,26 @@
+{
+  "name": "esp8266server",
+  "version": "1.0.0",
+  "description": "esp8266 control",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "javier ponce",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "format": "^0.2.2",
+    "fs": "0.0.1-security",
+    "http": "0.0.1-security",
+    "nodemailer": "^6.5.0",
+    "nohup": "^0.1.0",
+    "path": "^0.12.7",
+    "socket.io": "^4.0.1",
+    "websocket": "^1.0.33",
+    "ws": "^7.4.4"
+  }
+}

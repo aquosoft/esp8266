@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <title>ESP8266</title>
+</head>
+<body>
+    <div class="jumbotron text-center">
+        <h1>PANEL DE CONTROL</h1>
+        <p>control de ESP8266</p> 
+    </div>
+
+    <div class="container">
+  
+        <div class="panel panel-default">
+            <div class="panel panel-heading">Encendidos</div>
+            <div class="panel panel-body">
+                <div class="row">
+                    <div class="col-sm-2">
+                        <button id="reset" class="btn btn-danger">Reset</button>
+                        <button id="power" class="btn btn-success">Power</button>
+                    </div>
+                    <div class="col-sm-3">
+                        <label for="filtroIdentificador">ESTADO </label>
+                        <input type="texto" class="form-control" id="estado" disabled></input>
+                    </div>                
+                    <div class="col-sm-7">
+                        <label for="filtroIdentificador">ULTIMO DISPARO </label>
+                        <input type="texto" class="form-control" id="ultimodisparo" disabled></input>
+                    </div>                                      
+                </div>    
+
+            </div>
+        </div>             
+        <div class="panel panel-default">
+            <div class="panel panel-heading">Control Relays</div>
+            <div class="panel panel-body">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <button id="relayon" class="btn btn-success">Relay ON</button>
+                        <button id="relayoff" class="btn btn-danger">Relay OFF</button>     
+                        <button id="testalarm" class="btn btn-danger">Test</button>     
+                    </div>
+                </div>    
+
+            </div>
+        </div>      
+        <div class="panel panel-default">
+            <div class="panel panel-heading">Terminal</div>
+            <div class="panel panel-body">
+                <div class="row">
+                    <div class="col-sm-12">
+                       <div id="terminal"></div>
+                    </div>
+                </div>    
+
+            </div>
+        </div>          
+    </div>
+     
+
+</body>
+</html>
+<script src="js/index.js"> </script>
