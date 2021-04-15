@@ -19,6 +19,11 @@ socket.on('estadoESP8266',function(data){
     $('#estado').val('');
     $('#estado').val(data);
 })
+socket.on('ipEsp8266',function(data){
+    $('#ipEsp8266').val('');
+    $('#ipEsp8266').val(data);
+})
+
 socket.on('disparoESP8266',function(data){
     $('#ultimodisparo').val('');
     $('#ultimodisparo').val(data);

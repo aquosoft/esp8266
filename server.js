@@ -36,7 +36,7 @@ io.on('connection',function(cliente){
     
     //console.log(cliente);
     cliente.on('comando',function(data){
-        console.log(JSON.stringify(data));
+        console.log(JSON.strisngify(data));
     });
     cliente.on('cmd_ESP8266',function(data){
         SendDataToEsp8266(data,function(rta){
@@ -44,10 +44,16 @@ io.on('connection',function(cliente){
         })
     });
     cliente.on('estado_ESP8266',function(data){
-        SendDataToEsp8266(data,function(rta){
-            //ACTIVADA O DESACTIVADA
-            io.emit('estadoESP8266', rta)
-        })
+        if (urlEsp8266 != ''){
+            SendDataToEsp8266(data,function(rta){
+                //ACTIVADA O DESACTIVADA
+                io.emit('estadoESP8266', rta)
+                io.emit('ipEsp8266', 'Central escuchando desde: {0}'.format(urlEsp8266));
+            })
+        } else {
+            io.emit('estadoESP8266', 'DESCONOCIDO')
+            io.emit('ipEsp8266', 'NO ESTA ESTABLECIDA LA URL DE LA ESP8266');                
+        }
     });    
 
 })
@@ -129,32 +135,35 @@ function indiceDateActual(){
 const WS_ALLSOCKETPORT = 3333;
 const wsAllPort = new webSocket.Server({ port: WS_ALLSOCKETPORT }, () => console.log(`WS EMAIL escuchando en port   ${WS_ALLSOCKETPORT} `));
 const clienteWs = require('websocket').client;
+const { json } = require('express');
 
-
+let urlEsp8266 = '';
 
 function SendDataToEsp8266(cmd, cb){
-    let wsClient = new clienteWs();
-    //const wsClient = new webSocket.Server({ host: 'ws://192.168.0.73',port: 81 }, () => console.log(`conectado a esp82 en puerto 81`));
-    wsClient.connect('ws://192.168.0.73:81');
-    wsClient.on('connectFailed',function(error){
-        console.log('connect error: {0}'.format(error.toString()));
-    });
-    let espConnection;    
-    wsClient.on('connect',function(esp8266){
-        console.log('conectado con el esp8266');
-        esp8266.on('message',function(mensaje){
-            
-            console.log('mensaje recibido: {0}'.format(mensaje.utf8Data))
-            if (cb) cb(mensaje.utf8Data)
-        })
-    
-        console.log('ENVIANDO MENSAJE: {0}'.format(JSON.stringify(cmd)));
-        esp8266.send(JSON.stringify(cmd),function(err){
-            //esp8266.close(esp8266.CLOSE_REASON_NORMAL, 'conexion cerrada');
-            console.log(JSON.stringify(err))
-        });
-    });
+    if (urlEsp8266 != ''){
 
+        let wsClient = new clienteWs();
+        //const wsClient = new webSocket.Server({ host: 'ws://192.168.0.73',port: 81 }, () => console.log(`conectado a esp82 en puerto 81`));
+        wsClient.connect(urlEsp8266);
+        wsClient.on('connectFailed',function(error){
+            console.log('connect error: {0}'.format(error.toString()));
+        });
+
+        wsClient.on('connect',function(esp8266){
+            console.log('conectado con el esp8266');
+            esp8266.on('message',function(mensaje){
+                
+                console.log('mensaje recibido: {0}'.format(mensaje.utf8Data))
+                if (cb) cb(mensaje.utf8Data)
+            })
+        
+            console.log('ENVIANDO MENSAJE: {0}'.format(JSON.stringify(cmd)));
+            esp8266.send(JSON.stringify(cmd),function(err){
+                //esp8266.close(esp8266.CLOSE_REASON_NORMAL, 'conexion cerrada');
+                console.log(JSON.stringify(err))
+            });
+        });
+    }    
 
 }
 
@@ -286,13 +295,26 @@ wsAllPort.on("connection", (wsi, req) => {
             }
             JS = JSON.parse(data);
             DataImg = false;
-            //tipoInformacion = JS.IdTipoInformacion; //MUY IMPORTANTE!!!
-            console.log(JSON.stringify(data));
-            EnviarEmailServer(JS, [],function (data) {
-                io.emit('disparoESP8266', 'Alarma disparada a las {0}'.format(fechahoraactual()));
-                console.log(data)
-            })
-
+            if (JS.codigo == 0){
+                urlEsp8266 = JS.url;
+                console.log('Conexion establecida desde: {0}'.format(JS.url))
+                io.emit('ipEsp8266', 'Central escuchando desde: {0}'.format(JS.url));
+                var data={
+                    id : 99,
+                    comando :'ver estado'                    
+                }
+                SendDataToEsp8266(data,function(rta){
+                    //ACTIVADA O DESACTIVADA
+                    io.emit('estadoESP8266', rta)
+                })
+            } else {
+                //tipoInformacion = JS.IdTipoInformacion; //MUY IMPORTANTE!!!
+                console.log(JSON.stringify(data));
+                EnviarEmailServer(JS, [],function (data) {
+                    io.emit('disparoESP8266', 'Alarma disparada a las {0}'.format(fechahoraactual()));
+                    console.log(data)
+                });
+            }
         } else { //ACA RECIBE IMAGENES!!!
             DataImg = true;
             dir = `public/${carpetaActual}`;
