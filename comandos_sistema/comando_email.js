@@ -61,6 +61,7 @@ function inputmail(args) {
                 filename: element.substring(element.lastIndexOf('/') + 1),
                 path: `${wsApi.host}${wsApi.port ? ':' + wsApi.port : ''}/img?imgname=/${element}`
             }
+            //console.log(obj.path);
             adjuntos.push(obj);
         }
     }

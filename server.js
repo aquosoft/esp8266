@@ -61,6 +61,33 @@ app.get('/prueba',function(req,res){
     res.end();
 })
 
+function encode(input) {
+    var keyStr = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    var output = "";
+    var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+    var i = 0;
+
+    while (i < input.length) {
+        chr1 = input[i++];
+        chr2 = i < input.length ? input[i++] : Number.NaN; // Not sure if the index 
+        chr3 = i < input.length ? input[i++] : Number.NaN; // checks are needed here
+
+        enc1 = chr1 >> 2;
+        enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+        enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+        enc4 = chr3 & 63;
+
+        if (isNaN(chr2)) {
+            enc3 = enc4 = 64;
+        } else if (isNaN(chr3)) {
+            enc4 = 64;
+        }
+        output += keyStr.charAt(enc1) + keyStr.charAt(enc2) +
+            keyStr.charAt(enc3) + keyStr.charAt(enc4);
+    }
+    return output;
+}
+
 function isJson(item) {
     item = typeof item !== "string"
         ? JSON.stringify(item)
@@ -100,7 +127,7 @@ function indiceDateActual(){
 
 
 const WS_ALLSOCKETPORT = 3333;
-const wsAllPort = new webSocket.Server({ port: WS_ALLSOCKETPORT }, () => console.log(`WS Imagenes escuchando en port   ${WS_ALLSOCKETPORT} `));
+const wsAllPort = new webSocket.Server({ port: WS_ALLSOCKETPORT }, () => console.log(`WS EMAIL escuchando en port   ${WS_ALLSOCKETPORT} `));
 const clienteWs = require('websocket').client;
 
 
@@ -143,6 +170,19 @@ function responderJSON(res, data) {
     res.end();
 }
 
+var deleteFolderRecursive = function(path) {
+    if( fs.existsSync(path) ) {
+        fs.readdirSync(path).forEach(function(file) {
+          var curPath = path + "/" + file;
+            if(fs.lstatSync(curPath).isDirectory()) { // recurse
+                deleteFolderRecursive(curPath);
+            } else { // delete file
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
 
 
 wsAllPort.on("connection", (wsi, req) => {
@@ -155,13 +195,17 @@ wsAllPort.on("connection", (wsi, req) => {
     let identity = {
         token: ''
     };    
+    let dir = "";
+    let carpetaActual = String(DateActual);    
+    let imageIndex = 0;
+    let DataImg = false;
     
     const fechahoraactual = function(){
         let ta = new Date();
         return ta.toISOString();
     }
 
-    const EnviarEmailServer = function(obj,cb) {
+    const EnviarEmailServer = function(obj,lstAdjuntos,cb) {
         let mailEnvio = 'aquosoft@gmail.com'
         
         //let unaCarpeta = params.Carpeta;
@@ -171,9 +215,26 @@ wsAllPort.on("connection", (wsi, req) => {
                 unAsunto: 'ALARMA ESP8266',
                 unTextoCuerpo: `ALARMA DISPARADA A LAS :  ${fechahoraactual()}. Datos: ${JSON.stringify(obj)}`,
                 unHtmlCuerpo: '',
-                adjuntos: []
+                adjuntos: lstAdjuntos
             }
+            console.log(JSON.stringify(argsMail));
+            // if (lstAdjuntos.length > 0){
+            //     if (files.length > 0){
+            //         files.forEach(file => { 
+            //             let AdjuntoActual =  `${unaCarpeta}/${file}`
+            //             argsMail.adjuntos.push(AdjuntoActual);  
+            //         });
+            //     }   
+            // }
+
             comandos.ejecutar(identity, "EnviarMail", function (rta) {
+                if (lstAdjuntos.length > 0){
+                    setTimeout(() => {
+                        console.log("SE BIRRARAB TODOS LOS ARCHIVOS DE {0}".format(dir));
+                        deleteFolderRecursive(dir);    
+                    }, 10000);
+                } 
+
                 if (cb) cb(JSON.stringify(rta))
             }, argsMail);
             
@@ -184,40 +245,104 @@ wsAllPort.on("connection", (wsi, req) => {
 
 
     wsi.on("close", (code, reason) => {
+        console.log("se desconecto");
+        console.log(DataImg);
+        if (DataImg){
+            let unaLista = [];
+            let unaCarpeta = `${dir}/AllFotogramas`
+            console.log(unaCarpeta);
+            fs.readdir(unaCarpeta, function(err, files) {
+                if (files){
+                    if (files.length > 0){
+                        files.forEach(file => { 
+                            let AdjuntoActual =  `${unaCarpeta}/${file}`
+                            unaLista.push(AdjuntoActual);  
+                        });
+                    }  
+                }
+                console.log(unaLista);
+                EnviarEmailServer(JS, unaLista,function (data) {
+                    io.emit('disparoESP8266', 'Fotos enviadas por mail a las {0}'.format(fechahoraactual()));
+                    console.log(data)
+                })                  
+            });   
+        }
 
-        //FinalizarRecepcionXTiempo(listaImagenesVideo[token],token);
         return;
     });
 
     wsi.on("message", data => {
         wsi.isAlive = true;
-
+        
         if (typeof (data) === 'string') {
             if (!isJson(data)){ 
                 wsi.isAlive = false;
                 Fail = true;
-                console.log('INI*******EL DATO RECIBIDO ES NO ES UN JSON CORRECTO*******');
-                console.log(data);
-                console.log('FIN*******EL DATO RECIBIDO ES NO ES UN JSON CORRECTO*******');
 
                 wsi.send('El json recibido es incorrecto.');
                 wsi.close();
                 wsi.terminate();
                 return;       
             }
-            JS = JSON.parse(data)
+            JS = JSON.parse(data);
+            DataImg = false;
             //tipoInformacion = JS.IdTipoInformacion; //MUY IMPORTANTE!!!
             console.log(JSON.stringify(data));
-            EnviarEmailServer(JS, function (data) {
+            EnviarEmailServer(JS, [],function (data) {
                 io.emit('disparoESP8266', 'Alarma disparada a las {0}'.format(fechahoraactual()));
                 console.log(data)
             })
 
-        };
+        } else { //ACA RECIBE IMAGENES!!!
+            DataImg = true;
+            dir = `public/${carpetaActual}`;
+            !fs.existsSync(dir) && fs.mkdirSync(dir);
+            
+            let arrayBuffer;   
+                
+                
+            arrayBuffer = data;
+
+            let dirAF = `${dir}/AllFotogramas`;
+            !fs.existsSync(dirAF) && fs.mkdirSync(dirAF);
+
+            let filePath = `${dirAF}/imagen_${imageIndex}.jpg`;
+            var bytes = new Uint8Array(arrayBuffer);
+
+            fs.writeFile(filePath, encode(bytes), 'base64', function (err) {
+
+            });
+            imageIndex = imageIndex + 1;
+        }
     });    
 });
 
+app.options('/img', cors());
+app.get('/img', cors(), function (req, res) {
+    let unaImg = req.query.imgname;
+    let pathImg = path.join(__dirname + unaImg)
+    let pathNoImg = path.join(__dirname + '/public/noimage1.jpeg')
+    let pathNoVideo = path.join(__dirname + '/public/creandovideo.gif');
+    let tipo = (unaImg.indexOf('.mp4') > 0 ? 2 : 1);
+    fs.access(pathImg, fs.F_OK, (err) => {
+        if (err) {
+            if (tipo == 1){
+                res.sendFile(pathNoImg);
+            } else {
+                res.sendFile(pathNoVideo);
+            }
+            
 
+        } else {
+            res.sendFile(pathImg);
+        }
+
+        //file exists
+    });
+    //res.sendFile( unaImg );
+
+
+});
 
 
 

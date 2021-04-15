@@ -83,6 +83,14 @@ function bindObj(){
         comandos('cmd_ESP8266',obj);
         limpiarPantalla();        
     });
+    $('#fotos').on('click', function(){
+        var obj = {
+            id : 7,
+            comando : 'fotos',
+        }
+        comandos('cmd_ESP8266',obj);
+        limpiarPantalla();        
+    });    
 }
 
 function limpiarPantalla(){
